@@ -29,8 +29,8 @@ import java.net.URL;
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     TextView tvIsConnected, tvResponse;
-    EditText etName, etNum, etMail, getKey;
-    Button btnPost, btnGET;
+    EditText etName, etNum, etMail, getKey, del, oldname, newname, newnum, newmail;
+    Button btnPost, btnGET, btnDEL, btnUPDATE;
     Phonenum phonenum;
     static String strJson = "";
 
@@ -46,6 +46,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         tvResponse = (TextView) findViewById(R.id.tvResponse);
         btnGET = (Button) findViewById(R.id.getBtn);
         getKey = (EditText) findViewById(R.id.key);
+        del = (EditText) findViewById(R.id.del);
+        btnDEL = (Button) findViewById(R.id.delBtn);
+        oldname = (EditText) findViewById(R.id.update);
+        newname = (EditText) findViewById(R.id.update_name);
+        newnum = (EditText) findViewById(R.id.update_num);
+        newmail = (EditText) findViewById(R.id.update_mail);
+        btnUPDATE = (Button) findViewById(R.id.updateBtn);
         // check if you are connected or not
         if(isConnected()){
             tvIsConnected.setBackgroundColor(0xFF00CC00);
@@ -62,6 +69,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 httpTask.execute("http://192.249.19.243:9780/api/phonebooks/name/"+key);
             }
         });
+        btnDEL.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String key = del.getText().toString();
+                HttpDelAsyncTask httpTask = new HttpDelAsyncTask(MainActivity.this);
+                httpTask.execute("http://192.249.19.243:9780/api/phonebooks/name/"+key);
+            }
+        });
+        btnUPDATE.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String key = oldname.getText().toString();
+                HttpUpdateAsyncTask httpTask = new HttpUpdateAsyncTask(MainActivity.this);
+                httpTask.execute("http://192.249.19.243:9780/api/phonebooks/name/"+ key, newname.getText().toString(), newnum.getText().toString(), newmail.getText().toString());
+            }
+        });
+
         // add click listener to Button "POST"
         btnPost.setOnClickListener(this);
 
@@ -124,7 +148,124 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
 
+    public static String DEL(String url) {
+        InputStream is = null;
+        String result = "";
+        try {
+            URL urlCon = new URL(url);
+            HttpURLConnection httpCon = (HttpURLConnection)urlCon.openConnection();
 
+            String json = "";
+
+            // build jsonObject
+//            JSONObject jsonObject = new JSONObject();
+//            jsonObject.accumulate("name", phonenum.getName());
+//            jsonObject.accumulate("num", phonenum.getNum());
+//            jsonObject.accumulate("mail", phonenum.getMail());
+
+            // convert JSONObject to JSON to String
+//            json = jsonObject.toString();
+
+            // ** Alternative way to convert Person object to JSON string usin Jackson Lib
+            // ObjectMapper mapper = new ObjectMapper();
+            // json = mapper.writeValueAsString(person);
+
+            // Set some headers to inform server about the type of the content
+            httpCon.setRequestProperty("Accept", "application/json");
+            httpCon.setRequestProperty("Content-type", "application/json");
+
+            httpCon.setRequestMethod("DELETE");
+
+            httpCon.setDoOutput(true);
+            // InputStream으로 서버로 부터 응답을 받겠다는 옵션.
+            httpCon.setDoInput(true);
+
+            // receive response as inputStream
+            try {
+                is = httpCon.getInputStream();
+                // convert inputstream to string
+                if(is != null)
+                    result = convertInputStreamToString(is);
+                else
+                    result = "Did not work!";
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+            finally {
+                httpCon.disconnect();
+            }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        catch (Exception e) {
+            Log.d("InputStream", e.getLocalizedMessage());
+        }
+
+        return result;
+    }
+
+    public static String UPDATE(String url, Phonenum phonenum){
+        InputStream is = null;
+        String result = "";
+        try {
+            URL urlCon = new URL(url);
+            HttpURLConnection httpCon = (HttpURLConnection)urlCon.openConnection();
+
+            String json = "";
+
+            // build jsonObject
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.accumulate("name", phonenum.getName());
+            jsonObject.accumulate("num", phonenum.getNum());
+            jsonObject.accumulate("mail", phonenum.getMail());
+
+            // convert JSONObject to JSON to String
+            json = jsonObject.toString();
+
+            // ** Alternative way to convert Person object to JSON string usin Jackson Lib
+            // ObjectMapper mapper = new ObjectMapper();
+            // json = mapper.writeValueAsString(person);
+
+            // Set some headers to inform server about the type of the content
+            httpCon.setRequestProperty("Accept", "application/json");
+            httpCon.setRequestProperty("Content-type", "application/json");
+
+            // OutputStream으로 POST 데이터를 넘겨주겠다는 옵션.
+            httpCon.setDoOutput(true);
+            // InputStream으로 서버로 부터 응답을 받겠다는 옵션.
+            httpCon.setDoInput(true);
+            httpCon.setRequestMethod("PUT");
+
+            OutputStream os = httpCon.getOutputStream();
+            os.write(json.getBytes("utf-8"));
+            os.flush();
+            // receive response as inputStream
+            try {
+                is = httpCon.getInputStream();
+                // convert inputstream to string
+                if(is != null)
+                    result = convertInputStreamToString(is);
+                else
+                    result = "Did not work!";
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+            finally {
+                httpCon.disconnect();
+            }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        catch (Exception e) {
+            Log.d("InputStream", e.getLocalizedMessage());
+        }
+
+        return result;
+    }
 
     public static String POST(String url, Phonenum phonenum){
         InputStream is = null;
@@ -218,6 +359,59 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         protected String doInBackground(String... urls) {
 
             return GET(urls[0]);
+        }
+        // onPostExecute displays the results of the AsyncTask.
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            strJson = result;
+            mainAct.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mainAct.tvResponse.setText(strJson);
+
+                }
+            });
+
+        }
+    }
+
+    private class HttpDelAsyncTask extends AsyncTask<String, Void, String> {
+
+        private MainActivity mainAct;
+        HttpDelAsyncTask(MainActivity mainActivity) {this.mainAct = mainActivity;}
+        @Override
+        protected String doInBackground(String... urls) {
+
+            return DEL(urls[0]);
+        }
+        // onPostExecute displays the results of the AsyncTask.
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            strJson = result;
+            mainAct.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mainAct.tvResponse.setText(strJson);
+
+                }
+            });
+
+        }
+    }
+
+    private class HttpUpdateAsyncTask extends AsyncTask<String, Void, String> {
+
+        private MainActivity mainAct;
+        HttpUpdateAsyncTask(MainActivity mainActivity) {this.mainAct = mainActivity;}
+        @Override
+        protected String doInBackground(String... urls) {
+            phonenum = new Phonenum();
+            phonenum.setName(urls[1]);
+            phonenum.setNum(urls[2]);
+            phonenum.setMail(urls[3]);
+            return UPDATE(urls[0], phonenum);
         }
         // onPostExecute displays the results of the AsyncTask.
         @Override
